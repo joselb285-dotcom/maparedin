@@ -569,8 +569,14 @@ export default function App() {
         updatedAt: now(),
         subProjects: []
       }
-      await dbSaveProject(newProject)
-      setProjects(prev => [...prev, newProject])
+      try {
+        await dbSaveProject(newProject)
+        setProjects(prev => [...prev, newProject])
+      } catch (err) {
+        console.error('Error guardando proyecto:', err)
+        alert('Error al guardar el proyecto: ' + String(err))
+        return
+      }
     } else {
       if (!currentProjectId) return
       const newSP: SubProject = {
