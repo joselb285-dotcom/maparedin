@@ -1354,8 +1354,8 @@ button:disabled {
 .rack-panel-illustration {
   width: 100%;
   position: relative;
-  /* padding-top = 88/440 = 20% → matches SVG viewBox aspect ratio */
-  padding-top: 20%;
+  /* padding-top = 50/440 = 11.36% → matches SVG viewBox aspect ratio */
+  padding-top: 11.36%;
   overflow: hidden;
   border-radius: 2px;
   flex-shrink: 0;
@@ -3739,7 +3739,7 @@ button:disabled {
 .rack-tpl-panel-preview {
   width: 100%;
   position: relative;
-  padding-top: 20%;        /* 88 / 440 = 20% — matches new SVG viewBox ratio */
+  padding-top: 11.36%;     /* 50 / 440 = 11.36% — matches SVG viewBox ratio */
   border-radius: 4px;
   overflow: hidden;
   border: 1px solid #1e3a5f;
