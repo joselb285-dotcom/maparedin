@@ -62,7 +62,7 @@ function OltPanel({ t }: { t: RackTemplate }) {
   const rows    = 2
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="100%" style={{ display: 'block' }}>
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="100%" preserveAspectRatio="xMidYMid meet" style={{ display: 'block', position: 'absolute', inset: 0 }}>
       {/* Chassis */}
       <rect width={W} height={H} fill="#111" rx={3} />
       {/* Brand strip */}
@@ -118,7 +118,7 @@ function SwitchPanel({ t }: { t: RackTemplate }) {
   const startX  = 32
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="100%" style={{ display: 'block' }}>
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="100%" preserveAspectRatio="xMidYMid meet" style={{ display: 'block', position: 'absolute', inset: 0 }}>
       <rect width={W} height={H} fill="#0d1e14" rx={3} />
       <rect width={26} height={H} fill={bg} rx={3} />
       <rect x={23} width={3} height={H} fill={bg} />
@@ -155,7 +155,7 @@ function OdfPanel({ t }: { t: RackTemplate }) {
   const startX  = (W - cols * gap) / 2
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="100%" style={{ display: 'block' }}>
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="100%" preserveAspectRatio="xMidYMid meet" style={{ display: 'block', position: 'absolute', inset: 0 }}>
       <rect width={W} height={H} fill="#0d1e3a" rx={3} />
       {/* Left ear */}
       <rect x={0} width={12} height={H} fill="#0b1628" rx={3} />
@@ -193,7 +193,7 @@ function MikrotikPanel({ t }: { t: RackTemplate }) {
   const startX = 34
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="100%" style={{ display: 'block' }}>
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="100%" preserveAspectRatio="xMidYMid meet" style={{ display: 'block', position: 'absolute', inset: 0 }}>
       <rect width={W} height={H} fill="#0d1a2a" rx={3} />
       <rect width={26} height={H} fill={bg} rx={3} />
       <rect x={23} width={3} height={H} fill={bg} />
@@ -227,7 +227,7 @@ function SplitterPanel({ t }: { t: RackTemplate }) {
   const cellW = Math.min(38, (W - 16) / Math.min(count, 5))
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="100%" style={{ display: 'block' }}>
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="100%" preserveAspectRatio="xMidYMid meet" style={{ display: 'block', position: 'absolute', inset: 0 }}>
       <rect width={W} height={H} fill="#1a0d2e" rx={3} />
       <rect width={10} height={H} fill="#150b25" rx={3} />
       <circle cx={5} cy={12} r={2} fill="#334155" />
