@@ -411,7 +411,7 @@ function PanelRow({ panel, isFirst, isLast, onMoveUp, onMoveDown, onEdit, onDele
                   {ri * 2 * ODF_GROUP_SZ + gi * ODF_GROUP_SZ + 1}–{ri * 2 * ODF_GROUP_SZ + gi * ODF_GROUP_SZ + group.length}
                 </span>
                 <div className="rack-ports-row">
-                  {group.map(portBtn)}
+                  {group.map(p => portBtn(p))}
                 </div>
               </div>
             ))}
@@ -447,7 +447,7 @@ function PanelRow({ panel, isFirst, isLast, onMoveUp, onMoveDown, onEdit, onDele
         {panel.kind === 'mikrotik' && allGroups.map(group => (
           <div key={group.id} className="rack-port-group">
             <span className="rack-port-group-label">{group.label}</span>
-            <div className="rack-ports-row">{group.ports.map(portBtn)}</div>
+            <div className="rack-ports-row">{group.ports.map(p => portBtn(p))}</div>
           </div>
         ))}
 
@@ -469,7 +469,7 @@ function PanelRow({ panel, isFirst, isLast, onMoveUp, onMoveDown, onEdit, onDele
                   </div>
                   <span className="splitter-arrow-icon">▼</span>
                   <div className="splitter-card-outs">
-                    {outputPorts.map(portBtn)}
+                    {outputPorts.map(p => portBtn(p))}
                   </div>
                 </div>
               )
