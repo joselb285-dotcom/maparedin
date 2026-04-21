@@ -82,6 +82,7 @@ export type RackPort = {
   label: string
   status: RackPortStatus
   clientName?: string
+  zabbixItemKey?: string  // item key específico de Zabbix para este puerto PON
 }
 
 export type RackPanelKind = 'odf' | 'switch' | 'olt' | 'mikrotik' | 'splitter' | 'blank'

@@ -26,8 +26,9 @@ export async function getOltPortPower(
   auth: string,
   zabbixHost: string,
   portIndex: number,
+  specificKey?: string,
 ): Promise<string | null> {
-  const key = config.ponPortItemKey.replace('{port}', String(portIndex))
+  const key = specificKey ?? config.ponPortItemKey.replace('{port}', String(portIndex))
   const items = await rpc(config.url, 'item.get', {
     host: zabbixHost,
     search: { key_: key },

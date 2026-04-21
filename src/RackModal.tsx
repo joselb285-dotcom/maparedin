@@ -269,16 +269,28 @@ function PanelConfigForm({ title, initial, unit, onSubmit, onCancel }: PanelForm
 }
 
 // ── PortPopover ───────────────────────────────────────────────────────────────
-function PortPopover({ port, onChange, onClose }: {
-  port: RackPort; onChange: (p: RackPort) => void; onClose: () => void
+function PortPopover({ port, isPon, onChange, onClose }: {
+  port: RackPort; isPon?: boolean; onChange: (p: RackPort) => void; onClose: () => void
 }) {
-  const [label, setLabel]   = useState(port.label)
-  const [status, setStatus] = useState<RackPortStatus>(port.status)
-  const [client, setClient] = useState(port.clientName ?? '')
-  function save() { onChange({ ...port, label, status, clientName: client || undefined }); onClose() }
+  const [label, setLabel]       = useState(port.label)
+  const [status, setStatus]     = useState<RackPortStatus>(port.status)
+  const [client, setClient]     = useState(port.clientName ?? '')
+  const [zabbixKey, setZKey]    = useState(port.zabbixItemKey ?? '')
+
+  function save() {
+    onChange({
+      ...port,
+      label,
+      status,
+      clientName: client || undefined,
+      zabbixItemKey: isPon && zabbixKey.trim() ? zabbixKey.trim() : undefined,
+    })
+    onClose()
+  }
+
   return (
     <div className="port-popover" onClick={e => e.stopPropagation()}>
-      <div className="port-popover-title">Puerto {port.index}</div>
+      <div className="port-popover-title">Puerto PON {port.index}</div>
       <label>Etiqueta<input value={label} onChange={e => setLabel(e.target.value)} placeholder="Ej: NAP-01-P1" autoFocus onKeyDown={e => e.key === 'Enter' && save()} /></label>
       <label>Estado
         <select value={status} onChange={e => setStatus(e.target.value as RackPortStatus)}>
@@ -290,6 +302,16 @@ function PortPopover({ port, onChange, onClose }: {
       {status === 'active' && (
         <label>Cliente<input value={client} onChange={e => setClient(e.target.value)} placeholder="Nombre del cliente" /></label>
       )}
+      {isPon && (
+        <label style={{ marginTop: 4 }}>
+          Item key Zabbix
+          <input
+            value={zabbixKey}
+            onChange={e => setZKey(e.target.value)}
+            placeholder="Ej: olt.pon[1].rx  (vacío = usa plantilla)"
+          />
+        </label>
+      )}
       <div className="port-popover-actions">
         <button onClick={save}>Guardar</button>
         <button className="secondary" onClick={onClose}>Cancelar</button>
@@ -299,18 +321,19 @@ function PortPopover({ port, onChange, onClose }: {
 }
 
 // ── PortButton ────────────────────────────────────────────────────────────────
-function PortButton({ port, pending, connSelected, onPortClick, onEdit }: {
-  port: RackPort; pending: boolean; connSelected: boolean
+function PortButton({ port, pending, connSelected, isPon, onPortClick, onEdit }: {
+  port: RackPort; pending: boolean; connSelected: boolean; isPon?: boolean
   onPortClick: (p: RackPort) => void; onEdit: (p: RackPort) => void
 }) {
   const [showEdit, setShowEdit] = useState(false)
+  const hasZabbix = isPon && !!port.zabbixItemKey
   return (
     <div className="rack-port-wrap">
       <button
         data-port-id={port.id}
-        className={`rack-port ${pending ? 'port-pending' : ''} ${connSelected ? 'port-conn-sel' : ''}`}
+        className={`rack-port ${pending ? 'port-pending' : ''} ${connSelected ? 'port-conn-sel' : ''} ${hasZabbix ? 'port-zabbix-set' : ''}`}
         style={{ background: STATUS_COLOR[port.status] }}
-        title={[`P${port.index}`, port.label, port.clientName].filter(Boolean).join(' · ')}
+        title={[`P${port.index}`, port.label, port.clientName, hasZabbix ? `⚡ ${port.zabbixItemKey}` : ''].filter(Boolean).join(' · ')}
         onClick={e => { e.stopPropagation(); onPortClick(port) }}
         onContextMenu={e => { e.preventDefault(); e.stopPropagation(); setShowEdit(true) }}
       >
@@ -319,7 +342,7 @@ function PortButton({ port, pending, connSelected, onPortClick, onEdit }: {
       {port.status === 'active' && <span className="port-active-dot" />}
       {port.label && <span className="port-label-text">{port.label}</span>}
       {showEdit && (
-        <PortPopover port={port}
+        <PortPopover port={port} isPon={isPon}
           onChange={updated => { onEdit(updated); setShowEdit(false) }}
           onClose={() => setShowEdit(false)} />
       )}
@@ -351,11 +374,12 @@ function PanelRow({ panel, isFirst, isLast, onMoveUp, onMoveDown, onEdit, onDele
   const uplinkGroup  = hasSplit ? allGroups.find(g => g.label.toLowerCase().includes('uplink')) ?? null : null
   const mainGroups   = hasSplit ? allGroups.filter(g => g !== uplinkGroup) : allGroups
 
-  function portBtn(port: RackPort) {
+  function portBtn(port: RackPort, isPon = false) {
     return (
       <PortButton key={port.id} port={port}
         pending={pendingPortId === port.id}
         connSelected={connectedPortIds.has(port.id)}
+        isPon={isPon}
         onPortClick={onPortClick}
         onEdit={updated => onPortEdit(port.id, updated)} />
     )
@@ -398,18 +422,21 @@ function PanelRow({ panel, isFirst, isLast, onMoveUp, onMoveDown, onEdit, onDele
         {hasSplit && (
           <div className="rack-body-split">
             <div className="rack-body-main">
-              {mainGroups.map(group => (
-                <div key={group.id} className="rack-port-group">
-                  <span className="rack-port-group-label">{group.label}</span>
-                  <div className="rack-ports-row">{group.ports.map(portBtn)}</div>
-                </div>
-              ))}
+              {mainGroups.map(group => {
+                const isPonGroup = panel.kind === 'olt' && group.label.toLowerCase().includes('pon')
+                return (
+                  <div key={group.id} className="rack-port-group">
+                    <span className="rack-port-group-label">{group.label}</span>
+                    <div className="rack-ports-row">{group.ports.map(p => portBtn(p, isPonGroup))}</div>
+                  </div>
+                )
+              })}
             </div>
             {uplinkGroup && (
               <div className="rack-body-uplink">
                 <span className="rack-body-uplink-label">{uplinkGroup.label}</span>
                 <div className="rack-ports-col">
-                  {uplinkGroup.ports.map(portBtn)}
+                  {uplinkGroup.ports.map(p => portBtn(p, false))}
                 </div>
               </div>
             )}
@@ -589,7 +616,7 @@ function ZabbixPowerPanel({ panels, config, onClose }: {
           const ports = ponGroup?.ports ?? []
           Promise.all(
             ports.map(pt =>
-              getOltPortPower(config, auth, res.host, pt.index)
+              getOltPortPower(config, auth, res.host, pt.index, pt.zabbixItemKey)
                 .then(val => ({ portIndex: pt.index, label: pt.label || `P${pt.index}`, value: val }))
                 .catch(e => ({ portIndex: pt.index, label: pt.label || `P${pt.index}`, value: null, error: e instanceof Error ? e.message : 'Error' }))
             )

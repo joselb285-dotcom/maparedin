@@ -3436,3 +3436,9 @@ button:disabled {
 .zabbix-configured {
   color: #4ade80 !important;
 }
+
+/* Puerto PON con item Zabbix configurado */
+.port-zabbix-set {
+  outline: 2px solid #2563eb !important;
+  outline-offset: 1px;
+}
