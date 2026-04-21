@@ -1,8 +1,10 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type {
   OdfConnectorType, Rack, RackConnection,
-  RackPanel, RackPanelKind, RackPort, RackPortGroup, RackPortStatus
+  RackPanel, RackPanelKind, RackPort, RackPortGroup, RackPortStatus,
+  ZabbixConfig,
 } from './types'
+import { zabbixLogin, getOltPortPower } from './zabbix'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const UNIT_H        = 104
@@ -95,8 +97,9 @@ function PanelConfigForm({ title, initial, unit, onSubmit, onCancel }: PanelForm
   const [portCount, setPC]  = useState(initial?.portCount ?? 24)
   // OLT
   const pg = initial?.portGroups ?? []
-  const [ponPorts, setPon]  = useState(pg[0]?.ports.length ?? 8)
-  const [uplinkPorts, setUL]= useState(pg[1]?.ports.length ?? 2)
+  const [ponPorts, setPon]     = useState(pg[0]?.ports.length ?? 8)
+  const [uplinkPorts, setUL]   = useState(pg[1]?.ports.length ?? 2)
+  const [zabbixHost, setZHost] = useState(initial?.zabbixHost ?? '')
   // Switch
   const [swUp, setSwUp]     = useState(pg[0]?.ports.length ?? 2)
   const [swAcc, setSwAcc]   = useState(pg[1]?.ports.length ?? 24)
@@ -123,7 +126,7 @@ function PanelConfigForm({ title, initial, unit, onSubmit, onCancel }: PanelForm
       }
       base = { ...base, connectorType: connType, portCount, ports, portGroups: undefined }
     } else if (kind === 'olt') {
-      base = { ...base, ports: [], portGroups: [
+      base = { ...base, ports: [], zabbixHost: zabbixHost.trim() || undefined, portGroups: [
         makeGroup(`PON (${ponPorts})`, ponPorts),
         makeGroup(`Uplink (${uplinkPorts})`, uplinkPorts),
       ]}
@@ -191,18 +194,29 @@ function PanelConfigForm({ title, initial, unit, onSubmit, onCancel }: PanelForm
         </div>
       )}
       {kind === 'olt' && (
-        <div className="rack-add-row">
-          <label>Puertos PON
-            <select value={ponPorts} onChange={e => setPon(Number(e.target.value))}>
-              {PON_PORTS.map(n => <option key={n} value={n}>{n}</option>)}
-            </select>
-          </label>
-          <label>Puertos Uplink
-            <select value={uplinkPorts} onChange={e => setUL(Number(e.target.value))}>
-              {UPLINK_PORTS.map(n => <option key={n} value={n}>{n}</option>)}
-            </select>
-          </label>
-        </div>
+        <>
+          <div className="rack-add-row">
+            <label>Puertos PON
+              <select value={ponPorts} onChange={e => setPon(Number(e.target.value))}>
+                {PON_PORTS.map(n => <option key={n} value={n}>{n}</option>)}
+              </select>
+            </label>
+            <label>Puertos Uplink
+              <select value={uplinkPorts} onChange={e => setUL(Number(e.target.value))}>
+                {UPLINK_PORTS.map(n => <option key={n} value={n}>{n}</option>)}
+              </select>
+            </label>
+          </div>
+          <div className="rack-add-row">
+            <label style={{ flex: 1 }}>Host en Zabbix
+              <input
+                value={zabbixHost}
+                onChange={e => setZHost(e.target.value)}
+                placeholder="Ej: OLT-NORTE-01"
+              />
+            </label>
+          </div>
+        </>
       )}
       {kind === 'switch' && (
         <div className="rack-add-row">
@@ -542,13 +556,126 @@ function ConnectionOverlay({ connections, portPositions, selectedConnId, onSelec
   )
 }
 
-// ── Main ──────────────────────────────────────────────────────────────────────
-interface Props {
-  featureName: string; rack: Rack
-  onChange: (rack: Rack) => void; onClose: () => void
+// ── ZabbixPowerPanel ──────────────────────────────────────────────────────────
+function ZabbixPowerPanel({ panels, config, onClose }: {
+  panels: RackPanel[]
+  config: ZabbixConfig
+  onClose: () => void
+}) {
+  type PortPower = { portIndex: number; label: string; value: string | null; error?: string }
+  type PanelResult = { panelName: string; host: string; ports: PortPower[]; loading: boolean }
+
+  const oltPanels = panels.filter(p => p.kind === 'olt' && p.zabbixHost)
+  const [results, setResults] = useState<PanelResult[]>(
+    oltPanels.map(p => {
+      const ponGroup = (p.portGroups ?? []).find(g => g.label.toLowerCase().includes('pon'))
+      return {
+        panelName: p.name,
+        host: p.zabbixHost!,
+        ports: (ponGroup?.ports ?? []).map(pt => ({ portIndex: pt.index, label: pt.label || `P${pt.index}`, value: null })),
+        loading: true,
+      }
+    })
+  )
+
+  useEffect(() => {
+    if (oltPanels.length === 0) return
+    ;(async () => {
+      try {
+        const auth = await zabbixLogin(config)
+        setResults(prev => prev.map((res, i) => {
+          const panel = oltPanels[i]
+          const ponGroup = (panel.portGroups ?? []).find(g => g.label.toLowerCase().includes('pon'))
+          const ports = ponGroup?.ports ?? []
+          Promise.all(
+            ports.map(pt =>
+              getOltPortPower(config, auth, res.host, pt.index)
+                .then(val => ({ portIndex: pt.index, label: pt.label || `P${pt.index}`, value: val }))
+                .catch(e => ({ portIndex: pt.index, label: pt.label || `P${pt.index}`, value: null, error: e instanceof Error ? e.message : 'Error' }))
+            )
+          ).then(portResults => {
+            setResults(cur => cur.map((r, j) => j === i ? { ...r, ports: portResults, loading: false } : r))
+          })
+          return res
+        }))
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : 'Error de autenticación'
+        setResults(prev => prev.map(r => ({
+          ...r,
+          loading: false,
+          ports: r.ports.map(p => ({ ...p, error: msg })),
+        })))
+      }
+    })()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  function powerColor(val: string | null) {
+    if (!val) return '#475569'
+    const n = parseFloat(val)
+    if (isNaN(n)) return '#475569'
+    if (n >= -8)  return '#f59e0b'
+    if (n >= -27) return '#4ade80'
+    if (n >= -30) return '#fb923c'
+    return '#f87171'
+  }
+
+  if (oltPanels.length === 0) {
+    return (
+      <div className="zabbix-power-panel">
+        <div className="zabbix-power-header">
+          <span>⚡ Potencias PON — Zabbix</span>
+          <button className="secondary small" onClick={onClose}>✕</button>
+        </div>
+        <p style={{ color: '#64748b', fontSize: '0.82rem', padding: '12px 16px' }}>
+          Ningún panel OLT tiene configurado un host de Zabbix.<br />
+          Editar el panel OLT y completar el campo "Host en Zabbix".
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="zabbix-power-panel">
+      <div className="zabbix-power-header">
+        <span>⚡ Potencias PON — Zabbix</span>
+        <button className="secondary small" onClick={onClose}>✕</button>
+      </div>
+      {results.map((res, i) => (
+        <div key={i} className="zabbix-power-block">
+          <div className="zabbix-power-block-title">
+            {res.panelName} <span style={{ color: '#64748b', fontWeight: 400 }}>({res.host})</span>
+          </div>
+          {res.loading ? (
+            <span style={{ color: '#64748b', fontSize: '0.8rem' }}>Consultando...</span>
+          ) : (
+            <div className="zabbix-port-grid">
+              {res.ports.map(pt => (
+                <div key={pt.portIndex} className="zabbix-port-item" title={pt.label}>
+                  <span className="zabbix-port-idx">P{pt.portIndex}</span>
+                  <span className="zabbix-port-val" style={{ color: powerColor(pt.value) }}>
+                    {pt.error ? '✗' : (pt.value ?? '—')}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  )
 }
 
-export default function RackModal({ featureName, rack, onChange, onClose }: Props) {
+// ── Main ──────────────────────────────────────────────────────────────────────
+interface Props {
+  featureName: string
+  rack: Rack
+  zabbixConfig?: ZabbixConfig | null
+  onChange: (rack: Rack) => void
+  onClose: () => void
+}
+
+export default function RackModal({ featureName, rack, zabbixConfig, onChange, onClose }: Props) {
   const [r, setR] = useState<Rack>({ ...rack })
   const [addingToUnit, setAddingToUnit]     = useState<number | null>(null)
   const [editingPanelId, setEditingPanelId] = useState<string | null>(null)
@@ -556,6 +683,7 @@ export default function RackModal({ featureName, rack, onChange, onClose }: Prop
   const [selectedConnId, setSelectedConnId] = useState<string | null>(null)
   const [portPositions, setPortPositions]   = useState<Map<string, { x: number; y: number }>>(new Map())
   const [maximized, setMaximized]           = useState(false)
+  const [showZabbix, setShowZabbix]         = useState(false)
   const slotsWrapRef = useRef<HTMLDivElement>(null)
 
   function update(next: Rack) { setR(next); onChange(next) }
@@ -706,6 +834,15 @@ export default function RackModal({ featureName, rack, onChange, onClose }: Prop
                 {RACK_SIZES.map(n => <option key={n} value={n}>{n}U</option>)}
               </select>
             </label>
+            {zabbixConfig && (
+              <button
+                className={`secondary rack-maximize-btn${showZabbix ? ' rack-zabbix-active' : ''}`}
+                title="Ver potencias PON en Zabbix"
+                onClick={e => { e.stopPropagation(); setShowZabbix(v => !v) }}
+              >
+                ⚡ Potencias
+              </button>
+            )}
             <button className="secondary rack-maximize-btn"
               title={maximized ? 'Restaurar' : 'Maximizar'}
               onClick={e => { e.stopPropagation(); setMaximized(m => !m) }}>
@@ -818,6 +955,15 @@ export default function RackModal({ featureName, rack, onChange, onClose }: Prop
             </div>
           </div>
         </div>
+
+        {/* Zabbix power panel */}
+        {showZabbix && zabbixConfig && (
+          <ZabbixPowerPanel
+            panels={r.panels}
+            config={zabbixConfig}
+            onClose={() => setShowZabbix(false)}
+          />
+        )}
 
         {/* Legend */}
         <div className="rack-legend">

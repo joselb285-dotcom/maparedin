@@ -102,6 +102,7 @@ export type RackPanel = {
   portCount?: number
   ports: RackPort[]           // ODF / patch
   portGroups?: RackPortGroup[] // OLT / switch / mikrotik
+  zabbixHost?: string          // hostname en Zabbix para este panel OLT
 }
 
 export type RackConnection = {
@@ -148,6 +149,19 @@ export type Project = {
 }
 
 export type AppView = 'home' | 'subprojects' | 'editor'
+
+export type ZabbixAuthMethod = 'token' | 'credentials'
+
+export type ZabbixConfig = {
+  url: string
+  authMethod: ZabbixAuthMethod
+  apiToken?: string
+  username?: string
+  password?: string
+  ponPortItemKey: string       // key template, {port} = número de puerto PON
+  onuItemKey: string           // key del item de potencia ONU
+  onuHostSearchField: 'name' | 'host'
+}
 
 export type NominatimResult = {
   place_id: number

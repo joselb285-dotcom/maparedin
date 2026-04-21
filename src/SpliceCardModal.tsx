@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import type { AppFeature, ClientInfo, Fiber, FiberCable, FiberColor, SpliceCard, SpliceConnection, Splitter } from './types'
+import type { AppFeature, ClientInfo, Fiber, FiberCable, FiberColor, SpliceCard, SpliceConnection, Splitter, ZabbixConfig } from './types'
 import ClientModal from './ClientModal'
 import SpliceExportView from './SpliceExportView'
 import TitleBlockFormModal, { type TitleBlockData } from './TitleBlockFormModal'
@@ -430,6 +430,7 @@ interface Props {
   subProjectName: string
   spliceCard: SpliceCard
   allFeatures?: AppFeature[]
+  zabbixConfig?: ZabbixConfig | null
   onChange: (card: SpliceCard) => void
   onClose: () => void
   onTraceClient?: (fiberId: string) => void
@@ -442,6 +443,7 @@ export default function SpliceCardModal({
   subProjectName,
   spliceCard,
   allFeatures = [],
+  zabbixConfig,
   onChange,
   onClose,
   onTraceClient,
@@ -1321,6 +1323,7 @@ export default function SpliceCardModal({
           cableName={cable.name}
           fiberLabel={`F${fiber.index} ${fiber.color}`}
           clientInfo={fiber.clientInfo ?? { name: fiber.clientName ?? '' }}
+          zabbixConfig={zabbixConfig}
           onSave={info => updateClientInfo(cable.id, fiber.id, info)}
           onClose={() => setClientModalTarget(null)}
         />

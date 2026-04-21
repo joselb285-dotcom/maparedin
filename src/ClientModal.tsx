@@ -1,19 +1,42 @@
 import { useState } from 'react'
-import type { ClientInfo } from './types'
+import type { ClientInfo, ZabbixConfig } from './types'
+import { zabbixLogin, getOnuPower } from './zabbix'
 
 interface Props {
   fiberLabel: string
   cableName: string
   clientInfo: ClientInfo
+  zabbixConfig?: ZabbixConfig | null
   onSave: (info: ClientInfo) => void
   onClose: () => void
 }
 
-export default function ClientModal({ fiberLabel, cableName, clientInfo, onSave, onClose }: Props) {
+export default function ClientModal({ fiberLabel, cableName, clientInfo, zabbixConfig, onSave, onClose }: Props) {
   const [form, setForm] = useState<ClientInfo>({ ...clientInfo })
+  const [fetchingPower, setFetchingPower] = useState(false)
+  const [powerError, setPowerError] = useState<string | null>(null)
 
   function set<K extends keyof ClientInfo>(key: K, value: ClientInfo[K]) {
     setForm(prev => ({ ...prev, [key]: value }))
+  }
+
+  async function fetchZabbixPower() {
+    if (!zabbixConfig || !form.onuSerial?.trim()) return
+    setFetchingPower(true)
+    setPowerError(null)
+    try {
+      const auth = await zabbixLogin(zabbixConfig)
+      const val = await getOnuPower(zabbixConfig, auth, form.onuSerial.trim())
+      if (val === null) {
+        setPowerError('No se encontró el host o el item en Zabbix')
+      } else {
+        setForm(prev => ({ ...prev, onuPowerDbm: val }))
+      }
+    } catch (e: unknown) {
+      setPowerError(e instanceof Error ? e.message : 'Error al consultar Zabbix')
+    } finally {
+      setFetchingPower(false)
+    }
   }
 
   function handleSave() {
@@ -114,10 +137,27 @@ export default function ClientModal({ fiberLabel, cableName, clientInfo, onSave,
                 <span className={`client-power-badge ${getPowerClass(form.onuPowerDbm)}`}>
                   {getPowerLabel(form.onuPowerDbm)}
                 </span>
+                {zabbixConfig && (
+                  <button
+                    type="button"
+                    className="secondary small"
+                    title={form.onuSerial?.trim() ? 'Consultar potencia en Zabbix' : 'Ingresá el número de serie primero'}
+                    disabled={fetchingPower || !form.onuSerial?.trim()}
+                    onClick={fetchZabbixPower}
+                    style={{ marginLeft: 6, whiteSpace: 'nowrap' }}
+                  >
+                    {fetchingPower ? '⏳' : '⚡ Zabbix'}
+                  </button>
+                )}
               </div>
               <span className="client-power-hint">
                 Rango óptimo: −8 dBm a −27 dBm · Crítico: &lt; −30 dBm
               </span>
+              {powerError && (
+                <span className="client-power-hint" style={{ color: '#f87171' }}>
+                  ✗ {powerError}
+                </span>
+              )}
             </label>
           </div>
 

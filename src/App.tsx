@@ -17,6 +17,9 @@ import RackModal from './RackModal'
 import OpticalPathPanel from './OpticalPathPanel'
 import { traceOpticalPath } from './OpticalPath'
 import type { OpticalPath } from './OpticalPath'
+import ZabbixConfigModal from './ZabbixConfigModal'
+import { loadZabbixConfig } from './zabbix'
+import type { ZabbixConfig } from './types'
 
 const defaultCenter: L.LatLngExpression = [-31.4201, -64.1888]
 const defaultZoom = 13
@@ -205,6 +208,10 @@ export default function App() {
 
   // Hidden file input ref for import dropdown
   const importFileRef = useRef<HTMLInputElement>(null)
+
+  // Zabbix
+  const [zabbixConfig, setZabbixConfig] = useState<ZabbixConfig | null>(() => loadZabbixConfig())
+  const [showZabbixConfig, setShowZabbixConfig] = useState(false)
 
   // Editor
   const [showSpliceCard, setShowSpliceCard] = useState(false)
@@ -1057,6 +1064,14 @@ export default function App() {
             <span>{currentSubProject?.name}</span>
           </div>
           <div className="topbar-right">
+            <button
+              className={`secondary${zabbixConfig ? ' zabbix-configured' : ''}`}
+              title={zabbixConfig ? 'Zabbix configurado — clic para editar' : 'Configurar Zabbix'}
+              onClick={() => setShowZabbixConfig(true)}
+              style={{ fontSize: '0.78rem' }}
+            >
+              ⚡ Zabbix{zabbixConfig ? ' ✓' : ''}
+            </button>
             <DropdownMenu label="🗺 Capas">
               {LAYER_NAMES.map(name => (
                 <button
@@ -1190,6 +1205,7 @@ export default function App() {
         <RackModal
           featureName={selectedFeature.properties.name}
           rack={selectedFeature.properties.rack ?? { totalUnits: 12, panels: [], connections: [] }}
+          zabbixConfig={zabbixConfig}
           onChange={rack => updateSelectedFeature('rack', rack)}
           onClose={() => setShowRack(false)}
         />
@@ -1205,6 +1221,7 @@ export default function App() {
           subProjectName={currentSubProject?.name ?? ''}
           spliceCard={selectedFeature.properties.spliceCard ?? { cables: [], connections: [], splitters: [] }}
           allFeatures={features}
+          zabbixConfig={zabbixConfig}
           onChange={(card) => updateSelectedFeature('spliceCard', card)}
           onClose={() => setShowSpliceCard(false)}
           onTraceClient={(fiberId) => {
@@ -1218,6 +1235,14 @@ export default function App() {
         <OpticalPathPanel
           path={opticalPath}
           onClose={() => setOpticalPath(null)}
+        />
+      )}
+
+      {showZabbixConfig && (
+        <ZabbixConfigModal
+          initial={zabbixConfig}
+          onSaved={cfg => setZabbixConfig(cfg)}
+          onClose={() => setShowZabbixConfig(false)}
         />
       )}
     </div>
