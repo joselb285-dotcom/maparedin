@@ -3737,7 +3737,7 @@ button:disabled {
 .rack-tpl-modal-overlay {
   position: fixed;
   inset: 0;
-  z-index: 9999;
+  z-index: 10200;
   background: rgba(0,0,0,0.65);
   display: flex;
   align-items: center;
