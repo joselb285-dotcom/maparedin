@@ -1350,14 +1350,15 @@ button:disabled {
   overflow: hidden;
 }
 
-/* Front panel illustration — fills the rack slot height exactly */
+/* Front panel illustration — proportional, fills slot width */
 .rack-panel-illustration {
-  flex: 1;
-  min-height: 0;
   width: 100%;
   position: relative;
+  /* padding-top = 88/440 = 20% → matches SVG viewBox aspect ratio */
+  padding-top: 20%;
   overflow: hidden;
   border-radius: 2px;
+  flex-shrink: 0;
 }
 
 .rack-panel-illustration > svg,

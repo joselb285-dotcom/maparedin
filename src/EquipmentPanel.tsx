@@ -31,11 +31,11 @@ const S_LED: Record<RackPortStatus, string> = {
 }
 
 // ── SVG Chassis frame ─────────────────────────────────────────────────────────
-function Chassis({ children, b, fill = 'meet' }: { children: ReactNode; b: string; fill?: 'meet' | 'none' }) {
+function Chassis({ children, b }: { children: ReactNode; b: string }) {
   const c = brd(b)
   return (
     <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="100%"
-      preserveAspectRatio={fill === 'none' ? 'none' : 'xMidYMid meet'}
+      preserveAspectRatio="xMidYMid meet"
       style={{ display: 'block', position: 'absolute', inset: 0 }}>
       <defs>
         <linearGradient id="cg" x1="0" y1="0" x2="0" y2="1">
@@ -172,7 +172,7 @@ function OltSVG({ brand, model, heightU, ponPorts, uplinkPorts, interactive, cbs
 }) {
   const cols = Math.min(ponPorts, 8)
   return (
-    <Chassis b={brand} fill={interactive ? 'none' : 'meet'}>
+    <Chassis b={brand}>
       <text x={OLT_START} y={14} fontSize={8} fontWeight="bold" fill="#94a3b8"
         style={{ fontFamily: 'Arial,sans-serif', pointerEvents: 'none' }}>{model}</text>
 
@@ -250,7 +250,7 @@ function SwitchSVG({ brand, model, switchAccess, switchUplink, interactive, cbs,
 }) {
   const cols = Math.min(switchAccess, 24)
   return (
-    <Chassis b={brand} fill={interactive ? 'none' : 'meet'}>
+    <Chassis b={brand}>
       <text x={SW_START} y={14} fontSize={8} fontWeight="bold" fill="#94a3b8"
         style={{ fontFamily: 'Arial,sans-serif', pointerEvents: 'none' }}>{model}</text>
       <circle cx={SW_START+60} cy={10} r={3.5} fill="#22c55e" filter="url(#glow)" />
@@ -318,7 +318,7 @@ function OdfSVG({ portCount, connectorType, interactive, cbs, ports }: {
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="100%"
-      preserveAspectRatio={interactive ? 'none' : 'xMidYMid meet'}
+      preserveAspectRatio="xMidYMid meet"
       style={{ display: 'block', position: 'absolute', inset: 0 }}>
       <defs>
         <linearGradient id="odf-bg" x1="0" y1="0" x2="0" y2="1">
@@ -396,7 +396,7 @@ function MikrotikSVG({ brand, model, mkWan, mkLan, interactive, cbs, wanGroup, l
   wanGroup?: RackPort[]; lanGroup?: RackPort[]
 }) {
   return (
-    <Chassis b={brand} fill={interactive ? 'none' : 'meet'}>
+    <Chassis b={brand}>
       <text x={MK_START} y={14} fontSize={8} fontWeight="bold" fill="#94a3b8"
         style={{ fontFamily: 'Arial,sans-serif', pointerEvents: 'none' }}>{model}</text>
       <circle cx={MK_START+70} cy={10} r={3.5} fill="#22c55e" filter="url(#glow)" />
@@ -450,7 +450,7 @@ function SplitterSVG({ splitterCount, splitterRatio, interactive, cbs, groups }:
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="100%"
-      preserveAspectRatio={interactive ? 'none' : 'xMidYMid meet'}
+      preserveAspectRatio="xMidYMid meet"
       style={{ display: 'block', position: 'absolute', inset: 0 }}>
       <defs>
         <linearGradient id="sp-bg" x1="0" y1="0" x2="0" y2="1">

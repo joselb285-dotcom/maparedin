@@ -493,7 +493,7 @@ function PanelRow({ panel, isFirst, isLast, onMoveUp, onMoveDown, onEdit, onDele
       </div>
 
       {/* Body */}
-      <div className="rack-panel-body" style={panel.brand && panel.kind !== 'blank' ? { padding: 0, gap: 0, justifyContent: 'stretch' } : undefined}>
+      <div className="rack-panel-body" style={panel.brand && panel.kind !== 'blank' ? { padding: '4px 8px', gap: 3 } : undefined}>
 
         {/* Interactive front panel illustration — ports are the SVG elements */}
         {panel.brand && panel.kind !== 'blank' && (
@@ -512,16 +512,13 @@ function PanelRow({ panel, isFirst, isLast, onMoveUp, onMoveDown, onEdit, onDele
           </div>
         )}
 
-        {/* Name bar — hidden for branded panels (name already in SVG) */}
-        {!panel.brand && (
-          <div className="rack-panel-name">
-            <span className="rack-panel-kind-badge" style={{ background: accent + '33', color: accent }}>
-              {KIND_LABEL[panel.kind]}
-            </span>
-            <span className="rack-panel-title">{panel.name}</span>
-            {panel.connectorType && <span className="rack-panel-conn">{panel.connectorType}</span>}
-          </div>
-        )}
+        <div className="rack-panel-name">
+          <span className="rack-panel-kind-badge" style={{ background: accent + '33', color: accent }}>
+            {KIND_LABEL[panel.kind]}
+          </span>
+          <span className="rack-panel-title">{panel.name}</span>
+          {panel.connectorType && <span className="rack-panel-conn">{panel.connectorType}</span>}
+        </div>
 
         {/* ODF / Patch: grouped layout — only shown when no interactive illustration */}
         {isOdfLike && !panel.brand && odfRows.map((row, ri) => (
