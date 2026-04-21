@@ -3716,11 +3716,10 @@ button:disabled {
 }
 
 /* ── Equipment panel preview in template card ────────────────────────────── */
-/* padding-top trick: always works regardless of browser aspect-ratio support */
 .rack-tpl-panel-preview {
   width: 100%;
   position: relative;
-  padding-top: 35%;        /* 70 / 200 = 35% — matches SVG viewBox ratio */
+  padding-top: 20%;        /* 88 / 440 = 20% — matches new SVG viewBox ratio */
   border-radius: 4px;
   overflow: hidden;
   border: 1px solid #1e3a5f;
@@ -3730,11 +3729,11 @@ button:disabled {
 
 .rack-tpl-panel-preview > svg,
 .rack-tpl-panel-preview > * > svg {
-  position: absolute;
-  inset: 0;
+  position: absolute !important;
+  inset: 0 !important;
   width: 100% !important;
   height: 100% !important;
-  display: block;
+  display: block !important;
 }
 
 /* Cards inside the fixed modal */
@@ -3774,8 +3773,8 @@ button:disabled {
   background: #0b1628;
   border: 1px solid #1e3a5f;
   border-radius: 10px;
-  width: min(92vw, 860px);
-  max-height: 80vh;
+  width: min(96vw, 1100px);
+  max-height: 88vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -3821,8 +3820,8 @@ button:disabled {
 
 .rack-tpl-modal-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
   padding: 14px;
   overflow-y: auto;
 }
