@@ -3714,3 +3714,21 @@ button:disabled {
   line-height: 1.3;
   margin-top: 1px;
 }
+
+/* ── Equipment panel preview in template card ────────────────────────────── */
+.rack-tpl-panel-preview {
+  width: 100%;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid #1e3a5f;
+  margin-bottom: 4px;
+  background: #060e1a;
+}
+
+.rack-template-grid {
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)) !important;
+}
+
+.rack-template-card {
+  align-items: stretch !important;
+}

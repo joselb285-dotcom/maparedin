@@ -7,6 +7,7 @@ import type {
 import { zabbixLogin, getOltPortPower } from './zabbix'
 import { templatesByKind } from './rackTemplates'
 import type { RackTemplate } from './rackTemplates'
+import EquipmentPanel from './EquipmentPanel'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const UNIT_H        = 104
@@ -202,6 +203,9 @@ function PanelConfigForm({ title, initial, unit, onSubmit, onCancel }: PanelForm
               className="rack-template-card"
               onClick={() => applyTemplate(t)}
             >
+              <div className="rack-tpl-panel-preview">
+                <EquipmentPanel t={t} />
+              </div>
               <span className="rack-tpl-brand">{t.brand}</span>
               <span className="rack-tpl-model">{t.model}</span>
               {t.description && <span className="rack-tpl-desc">{t.description}</span>}
