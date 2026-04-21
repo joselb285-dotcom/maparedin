@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import type {
   OdfConnectorType, Rack, RackConnection,
   RackPanel, RackPanelKind, RackPort, RackPortGroup, RackPortStatus,
@@ -96,7 +97,7 @@ function TemplatePickerModal({ kind, onPick, onClose }: {
         `${t.brand} ${t.model} ${t.description ?? ''}`.toLowerCase().includes(filter.toLowerCase()))
     : templates
 
-  return (
+  return createPortal(
     <div className="rack-tpl-modal-overlay" onClick={onClose}>
       <div className="rack-tpl-modal" onClick={e => e.stopPropagation()}>
         <div className="rack-tpl-modal-header">
@@ -137,7 +138,8 @@ function TemplatePickerModal({ kind, onPick, onClose }: {
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 
