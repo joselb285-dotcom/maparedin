@@ -12,6 +12,7 @@ export type ClientInfo = {
   onuModel?: string
   onuSerial?: string
   onuPowerDbm?: string
+  oltHost?: string    // hostname Zabbix de la OLT a la que está conectado este cliente
   notes?: string
 }
 
@@ -139,7 +140,7 @@ export type SubProject = {
   updatedAt: string
   location?: SubProjectLocation
   features: AppFeature[]
-  zabbixOltHost?: string   // hostname Zabbix de la OLT que sirve este subproyecto
+  zabbixOltHosts?: string[]  // hostnames Zabbix de las OLTs que sirven este subproyecto
 }
 
 export type Project = {

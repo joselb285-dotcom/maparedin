@@ -9,7 +9,7 @@ interface Props {
   cableName: string
   clientInfo: ClientInfo
   zabbixConfig?: ZabbixConfig | null
-  zabbixOltHost?: string
+  zabbixOltHosts?: string[]
   onSave: (info: ClientInfo) => void
   onClose: () => void
 }
@@ -22,7 +22,7 @@ type BwState =
 
 const HOUR_OPTIONS = [1, 6, 24, 48] as const
 
-export default function ClientModal({ fiberLabel, cableName, clientInfo, zabbixConfig, zabbixOltHost, onSave, onClose }: Props) {
+export default function ClientModal({ fiberLabel, cableName, clientInfo, zabbixConfig, zabbixOltHosts = [], onSave, onClose }: Props) {
   const [form, setForm]           = useState<ClientInfo>({ ...clientInfo })
   const [fetchingPower, setFP]    = useState(false)
   const [powerError, setPowerErr] = useState<string | null>(null)
@@ -32,6 +32,7 @@ export default function ClientModal({ fiberLabel, cableName, clientInfo, zabbixC
   const hasZabbix   = !!zabbixConfig
   const hasSerial   = !!form.onuSerial?.trim()
   const hasBwKeys   = !!(zabbixConfig?.onuBandwidthInKey || zabbixConfig?.onuBandwidthOutKey)
+  const activeOlt   = form.oltHost ?? (zabbixOltHosts.length === 1 ? zabbixOltHosts[0] : undefined)
 
   function set<K extends keyof ClientInfo>(key: K, value: ClientInfo[K]) {
     setForm(prev => ({ ...prev, [key]: value }))
@@ -79,6 +80,7 @@ export default function ClientModal({ fiberLabel, cableName, clientInfo, zabbixC
       onuModel:     form.onuModel     || undefined,
       onuSerial:    form.onuSerial    || undefined,
       onuPowerDbm:  form.onuPowerDbm  || undefined,
+      oltHost:      form.oltHost      || undefined,
       notes:        form.notes        || undefined,
     }
     onSave(cleaned)
@@ -133,6 +135,15 @@ export default function ClientModal({ fiberLabel, cableName, clientInfo, zabbixC
               <input value={form.onuSerial ?? ''} onChange={e => set('onuSerial', e.target.value)}
                 placeholder="Ej: HWTC1A2B3C4D" />
             </label>
+            {zabbixOltHosts.length > 0 && (
+              <label style={{ gridColumn: '1 / -1' }}>
+                OLT (Zabbix)
+                <select value={form.oltHost ?? ''} onChange={e => set('oltHost', e.target.value || undefined)}>
+                  <option value="">— Sin asignar —</option>
+                  {zabbixOltHosts.map(h => <option key={h} value={h}>{h}</option>)}
+                </select>
+              </label>
+            )}
             <label className="client-power-label">
               Potencia óptica recibida (dBm)
               <div className="client-power-row">
@@ -144,9 +155,9 @@ export default function ClientModal({ fiberLabel, cableName, clientInfo, zabbixC
                 </span>
                 {hasZabbix && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 6 }}>
-                    {zabbixOltHost && (
+                    {activeOlt && (
                       <span style={{ fontSize: '0.72rem', color: '#60a5fa', background: '#0d1e3a', border: '1px solid #1e3a5f', borderRadius: 4, padding: '2px 6px', whiteSpace: 'nowrap' }}>
-                        OLT: {zabbixOltHost}
+                        OLT: {activeOlt}
                       </span>
                     )}
                     <button type="button" className="secondary small"

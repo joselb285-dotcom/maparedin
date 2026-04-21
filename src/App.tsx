@@ -233,8 +233,8 @@ export default function App() {
   const currentProject = projects.find(p => p.id === currentProjectId) ?? null
   const currentSubProject = currentProject?.subProjects.find(sp => sp.id === currentSubProjectId) ?? null
 
-  // OLT hosts disponibles en este subproyecto (de paneles OLT del rack con zabbixHost)
-  const oltHostOptions = useMemo(() => {
+  // OLT hosts desde paneles OLT del rack (con zabbixHost configurado)
+  const oltHostsFromRack = useMemo(() => {
     if (!currentSubProject || !zabbixConfig) return []
     const hosts = new Set<string>()
     for (const f of currentSubProject.features) {
@@ -246,6 +246,9 @@ export default function App() {
     }
     return [...hosts]
   }, [currentSubProject, zabbixConfig])
+
+  const [showOltManager, setShowOltManager] = useState(false)
+  const [newOltHost, setNewOltHost] = useState('')
   const selectedFeature = useMemo(
     () => features.find(f => f.properties.id === selectedFeatureId) ?? null,
     [features, selectedFeatureId]
@@ -552,14 +555,15 @@ export default function App() {
     setView('subprojects')
   }
 
-  function setOltHost(host: string) {
+  function patchSubProjectOlts(hosts: string[]) {
     if (!currentProjectId || !currentSubProjectId) return
     setProjects(prev => {
       const updated = prev.map(p =>
         p.id !== currentProjectId ? p : {
           ...p,
           subProjects: p.subProjects.map(sp =>
-            sp.id !== currentSubProjectId ? sp : { ...sp, zabbixOltHost: host || undefined }
+            sp.id !== currentSubProjectId ? sp
+              : { ...sp, zabbixOltHosts: hosts.length ? hosts : undefined }
           )
         }
       )
@@ -567,6 +571,19 @@ export default function App() {
       if (updatedProject) scheduleSave(updatedProject)
       return updated
     })
+  }
+
+  function addOltHost() {
+    const h = newOltHost.trim()
+    if (!h) return
+    const current = currentSubProject?.zabbixOltHosts ?? []
+    if (!current.includes(h)) patchSubProjectOlts([...current, h])
+    setNewOltHost('')
+  }
+
+  function removeOltHost(host: string) {
+    const current = currentSubProject?.zabbixOltHosts ?? []
+    patchSubProjectOlts(current.filter(h => h !== host))
   }
 
   // ── Manual save ───────────────────────────────────────────────────────────
@@ -1105,26 +1122,64 @@ export default function App() {
               ⚡ Zabbix{zabbixConfig ? ' ✓' : ''}
             </button>
             {zabbixConfig && (
-              <select
-                value={currentSubProject?.zabbixOltHost ?? ''}
-                onChange={e => {
-                  if (e.target.value === '__manual__') {
-                    const h = window.prompt('Hostname de la OLT en Zabbix:', currentSubProject?.zabbixOltHost ?? '')
-                    if (h !== null) setOltHost(h.trim())
-                  } else {
-                    setOltHost(e.target.value)
-                  }
-                }}
-                title="OLT Zabbix para este subproyecto"
-                style={{ fontSize: '0.78rem', background: '#0d1a2e', color: '#94a3b8', border: '1px solid #1e3a5f', borderRadius: 4, padding: '3px 6px' }}
-              >
-                <option value="">OLT: sin selección</option>
-                {oltHostOptions.map(h => <option key={h} value={h}>{h}</option>)}
-                {currentSubProject?.zabbixOltHost && !oltHostOptions.includes(currentSubProject.zabbixOltHost) && (
-                  <option value={currentSubProject.zabbixOltHost}>{currentSubProject.zabbixOltHost}</option>
+              <div style={{ position: 'relative' }}>
+                <button
+                  className="secondary"
+                  onClick={() => setShowOltManager(v => !v)}
+                  title="Gestionar OLTs de este subproyecto"
+                  style={{ fontSize: '0.78rem' }}
+                >
+                  🔌 OLTs ({currentSubProject?.zabbixOltHosts?.length ?? 0})
+                </button>
+                {showOltManager && (
+                  <div style={{
+                    position: 'absolute', top: '110%', right: 0, zIndex: 9999,
+                    background: '#0d1a2e', border: '1px solid #1e3a5f', borderRadius: 6,
+                    padding: 12, minWidth: 280, boxShadow: '0 4px 20px rgba(0,0,0,0.6)',
+                  }} onClick={e => e.stopPropagation()}>
+                    <div style={{ fontSize: '0.78rem', color: '#60a5fa', marginBottom: 8, fontWeight: 600 }}>
+                      OLTs — {currentSubProject?.name}
+                    </div>
+
+                    {/* Lista de OLTs configuradas */}
+                    {(currentSubProject?.zabbixOltHosts ?? []).map(h => (
+                      <div key={h} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                        <span style={{ flex: 1, fontSize: '0.78rem', color: '#94a3b8', fontFamily: 'monospace', background: '#060e1a', borderRadius: 3, padding: '2px 6px' }}>{h}</span>
+                        <button className="danger compact" style={{ fontSize: '0.7rem', padding: '2px 6px' }}
+                          onClick={() => removeOltHost(h)}>✕</button>
+                      </div>
+                    ))}
+                    {(currentSubProject?.zabbixOltHosts?.length ?? 0) === 0 && (
+                      <div style={{ fontSize: '0.75rem', color: '#475569', marginBottom: 8 }}>Sin OLTs configuradas</div>
+                    )}
+
+                    {/* OLTs detectadas del rack (no agregadas aún) */}
+                    {oltHostsFromRack.filter(h => !(currentSubProject?.zabbixOltHosts ?? []).includes(h)).map(h => (
+                      <div key={h} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                        <span style={{ flex: 1, fontSize: '0.75rem', color: '#475569', fontFamily: 'monospace', background: '#060e1a', borderRadius: 3, padding: '2px 6px' }}>
+                          {h} <span style={{ color: '#334155' }}>(rack)</span>
+                        </span>
+                        <button className="secondary" style={{ fontSize: '0.7rem', padding: '2px 6px' }}
+                          onClick={() => { const cur = currentSubProject?.zabbixOltHosts ?? []; patchSubProjectOlts([...cur, h]) }}>+ Agregar</button>
+                      </div>
+                    ))}
+
+                    {/* Input para agregar manualmente */}
+                    <div style={{ display: 'flex', gap: 4, marginTop: 8 }}>
+                      <input
+                        value={newOltHost}
+                        onChange={e => setNewOltHost(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && addOltHost()}
+                        placeholder="Hostname OLT en Zabbix"
+                        style={{ flex: 1, fontSize: '0.75rem', background: '#060e1a', border: '1px solid #1e3a5f', borderRadius: 4, padding: '3px 6px', color: '#e2e8f0' }}
+                      />
+                      <button className="secondary" style={{ fontSize: '0.75rem' }} onClick={addOltHost}>+</button>
+                    </div>
+                    <button className="secondary" style={{ marginTop: 8, fontSize: '0.72rem', width: '100%' }}
+                      onClick={() => setShowOltManager(false)}>Cerrar</button>
+                  </div>
                 )}
-                <option value="__manual__">✏ Escribir hostname...</option>
-              </select>
+              </div>
             )}
             <DropdownMenu label="🗺 Capas">
               {LAYER_NAMES.map(name => (
@@ -1276,7 +1331,7 @@ export default function App() {
           spliceCard={selectedFeature.properties.spliceCard ?? { cables: [], connections: [], splitters: [] }}
           allFeatures={features}
           zabbixConfig={zabbixConfig}
-          zabbixOltHost={currentSubProject?.zabbixOltHost}
+          zabbixOltHosts={currentSubProject?.zabbixOltHosts ?? []}
           onChange={(card) => updateSelectedFeature('spliceCard', card)}
           onClose={() => setShowSpliceCard(false)}
           onTraceClient={(fiberId) => {
