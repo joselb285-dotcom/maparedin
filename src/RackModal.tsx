@@ -8,7 +8,7 @@ import type {
 import { zabbixLogin, getOltPortPower } from './zabbix'
 import { templatesByKind } from './rackTemplates'
 import type { RackTemplate } from './rackTemplates'
-import EquipmentPanel from './EquipmentPanel'
+import EquipmentPanel, { InteractiveEquipmentPanel } from './EquipmentPanel'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const UNIT_H        = 104
@@ -457,6 +457,8 @@ function PanelRow({ panel, isFirst, isLast, onMoveUp, onMoveDown, onEdit, onDele
   onPortEdit: (portId: string, updated: RackPort) => void
   pendingPortId: string | null; connectedPortIds: Set<string>
 }) {
+  const [svgPopover, setSvgPopover] = useState<{ port: RackPort; isPon: boolean; cx: number; cy: number } | null>(null)
+
   const accent      = KIND_ACCENT[panel.kind]
   const height      = panelHeightU(panel) * UNIT_H
   const isOdfLike   = panel.kind === 'odf'
@@ -491,27 +493,22 @@ function PanelRow({ panel, isFirst, isLast, onMoveUp, onMoveDown, onEdit, onDele
       </div>
 
       {/* Body */}
-      <div className="rack-panel-body">
-        {/* Equipment front panel illustration (shown when template was applied) */}
+      <div className="rack-panel-body" style={panel.brand && panel.kind !== 'blank' ? { padding: '4px 6px', gap: 4 } : undefined}>
+
+        {/* Interactive front panel illustration — ports are the SVG elements */}
         {panel.brand && panel.kind !== 'blank' && (
           <div className="rack-panel-illustration">
-            <EquipmentPanel t={{
-              id: panel.id,
-              brand: panel.brand,
-              model: panel.name,
-              kind: panel.kind,
-              heightU: panel.heightU,
-              ponPorts: (panel.portGroups ?? []).find(g => g.label.toLowerCase().includes('pon'))?.ports.length,
-              uplinkPorts: (panel.portGroups ?? []).find(g => g.label.toLowerCase().includes('uplink'))?.ports.length,
-              portCount: panel.portCount,
-              connectorType: panel.connectorType,
-              switchAccess: (panel.portGroups ?? []).find(g => g.label.toLowerCase().includes('access'))?.ports.length,
-              switchUplink: (panel.portGroups ?? []).find(g => g.label.toLowerCase().includes('uplink'))?.ports.length,
-              mkWan: (panel.portGroups ?? []).find(g => g.label.toLowerCase().includes('wan'))?.ports.length,
-              mkLan: (panel.portGroups ?? []).find(g => g.label.toLowerCase().includes('lan'))?.ports.length,
-              splitterCount: (panel.portGroups ?? []).length,
-              splitterRatio: ((panel.portGroups ?? [])[0]?.ports.length ?? 3) - 1,
-            }} />
+            <InteractiveEquipmentPanel
+              panel={panel}
+              pendingPortId={pendingPortId}
+              connectedPortIds={connectedPortIds}
+              onPortClick={onPortClick}
+              onPortRightClick={(port, cx, cy) => {
+                const ponGroup = (panel.portGroups ?? []).find(g => g.label.toLowerCase().includes('pon'))
+                const isPon = panel.kind === 'olt' && !!ponGroup?.ports.find(p => p.id === port.id)
+                setSvgPopover({ port, isPon, cx, cy })
+              }}
+            />
           </div>
         )}
 
@@ -523,8 +520,8 @@ function PanelRow({ panel, isFirst, isLast, onMoveUp, onMoveDown, onEdit, onDele
           {panel.connectorType && <span className="rack-panel-conn">{panel.connectorType}</span>}
         </div>
 
-        {/* ODF / Patch: grouped layout */}
-        {isOdfLike && odfRows.map((row, ri) => (
+        {/* ODF / Patch: grouped layout — only shown when no interactive illustration */}
+        {isOdfLike && !panel.brand && odfRows.map((row, ri) => (
           <div key={ri} className="odf-port-row">
             {row.map((group, gi) => (
               <div key={gi} className="odf-port-group">
@@ -539,8 +536,8 @@ function PanelRow({ panel, isFirst, isLast, onMoveUp, onMoveDown, onEdit, onDele
           </div>
         ))}
 
-        {/* OLT / Switch: main ports left, uplink right */}
-        {hasSplit && (
+        {/* OLT / Switch: main ports left, uplink right — only shown when no interactive illustration */}
+        {hasSplit && !panel.brand && (
           <div className="rack-body-split">
             <div className="rack-body-main">
               {mainGroups.map(group => {
@@ -564,16 +561,16 @@ function PanelRow({ panel, isFirst, isLast, onMoveUp, onMoveDown, onEdit, onDele
           </div>
         )}
 
-        {/* Mikrotik: stacked groups (WAN top, LAN bottom) */}
-        {panel.kind === 'mikrotik' && allGroups.map(group => (
+        {/* Mikrotik: stacked groups — only shown when no interactive illustration */}
+        {panel.kind === 'mikrotik' && !panel.brand && allGroups.map(group => (
           <div key={group.id} className="rack-port-group">
             <span className="rack-port-group-label">{group.label}</span>
             <div className="rack-ports-row">{group.ports.map(p => portBtn(p))}</div>
           </div>
         ))}
 
-        {/* Splitter panel: cards side by side, IN top → outputs bottom */}
-        {isSplitter && (
+        {/* Splitter panel — only shown when no interactive illustration */}
+        {isSplitter && !panel.brand && (
           <div className="splitter-panel-list">
             {allGroups.map((group, gi) => {
               const inputPort   = group.ports[0]
@@ -602,6 +599,19 @@ function PanelRow({ panel, isFirst, isLast, onMoveUp, onMoveDown, onEdit, onDele
           <span className="rack-panel-blank-label">{panel.name}</span>
         )}
       </div>
+
+      {/* Port edit popover for SVG interactive ports (fixed position) */}
+      {svgPopover && (
+        <div style={{ position: 'fixed', left: svgPopover.cx + 8, top: svgPopover.cy - 8, zIndex: 10300 }}
+          onClick={e => e.stopPropagation()}>
+          <PortPopover
+            port={svgPopover.port}
+            isPon={svgPopover.isPon}
+            onChange={updated => { onPortEdit(updated.id, updated); setSvgPopover(null) }}
+            onClose={() => setSvgPopover(null)}
+          />
+        </div>
+      )}
 
       {/* Right ear: controls */}
       <div className="rack-panel-ear right" style={{ width: 52 }}>
