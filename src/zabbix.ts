@@ -6,10 +6,20 @@ function normalizeUrl(raw: string): string {
   return `http://${s}`
 }
 
+// On localhost the Vite dev proxy avoids CORS. In production the request
+// goes directly (Zabbix must have CORS headers configured server-side).
+function resolvedBase(config: ZabbixConfig): { base: string; useProxy: boolean } {
+  const isLocalDev = typeof window !== 'undefined' &&
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+  return isLocalDev
+    ? { base: '/zabbix-proxy', useProxy: true }
+    : { base: normalizeUrl(config.url), useProxy: false }
+}
+
 async function rpc(config: ZabbixConfig, method: string, params: unknown, auth: string | null): Promise<unknown> {
-  const base    = normalizeUrl(config.url)
-  const body    = JSON.stringify({ jsonrpc: '2.0', method, params, auth, id: 1 })
-  const headers = { 'Content-Type': 'application/json' }
+  const { base } = resolvedBase(config)
+  const body     = JSON.stringify({ jsonrpc: '2.0', method, params, auth, id: 1 })
+  const headers  = { 'Content-Type': 'application/json' }
 
   // If user specified a path, use it directly — no fallback
   if (config.apiPath?.trim()) {
@@ -32,7 +42,7 @@ async function rpc(config: ZabbixConfig, method: string, params: unknown, auth: 
     if (data.error) throw new Error(data.error.data || data.error.message)
     return data.result
   }
-  throw new Error(`API Zabbix no encontrada. Todos los paths devolvieron 404 (último: ${lastErr}). Configurá el path manualmente.`)
+  throw new Error(`API Zabbix no encontrada. Todos los paths devolvieron 404 (último: ${lastErr}). Configurá el path manualmente en ⚡ Zabbix.`)
 }
 
 export async function zabbixLogin(config: ZabbixConfig): Promise<string> {
