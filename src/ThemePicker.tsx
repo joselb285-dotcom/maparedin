@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 
-export type ThemeName = 'océano' | 'medianoche' | 'carbón' | 'esmeralda' | 'amatista' | 'crepúsculo'
+export type ThemeName = 'océano' | 'medianoche' | 'carbón' | 'esmeralda' | 'amatista' | 'crepúsculo' | 'alba' | 'papel' | 'niebla'
 
 export const THEMES: { id: ThemeName; label: string; bg: string; accent: string }[] = [
   { id: 'océano',     label: 'Océano',     bg: '#0d1b31', accent: '#3b82f6' },
@@ -9,6 +9,9 @@ export const THEMES: { id: ThemeName; label: string; bg: string; accent: string 
   { id: 'esmeralda',  label: 'Esmeralda',  bg: '#0d1e18', accent: '#34d399' },
   { id: 'amatista',   label: 'Amatista',   bg: '#140f26', accent: '#a78bfa' },
   { id: 'crepúsculo', label: 'Crepúsculo', bg: '#1c1509', accent: '#fbbf24' },
+  { id: 'alba',       label: 'Alba',       bg: '#f1f5f9', accent: '#2563eb' },
+  { id: 'papel',      label: 'Papel',      bg: '#fdf8f0', accent: '#0d9488' },
+  { id: 'niebla',     label: 'Niebla',     bg: '#eaf0f6', accent: '#4f46e5' },
 ]
 
 const STORAGE_KEY = 'ftth-theme'
