@@ -1,19 +1,36 @@
 import type { ZabbixConfig } from './types'
 
+function normalizeUrl(raw: string): string {
+  const s = raw.trim().replace(/\/$/, '')
+  if (/^https?:\/\//i.test(s)) return s
+  return `http://${s}`
+}
+
+// Tries /api_jsonrpc.php first, then /zabbix/api_jsonrpc.php on 404
 async function rpc(url: string, method: string, params: unknown, auth: string | null): Promise<unknown> {
-  const res = await fetch(`${url.replace(/\/$/, '')}/api_jsonrpc.php`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ jsonrpc: '2.0', method, params, auth, id: 1 }),
-  })
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
-  const data = await res.json()
-  if (data.error) throw new Error(data.error.data || data.error.message)
-  return data.result
+  const base = normalizeUrl(url)
+  const paths = ['/api_jsonrpc.php', '/zabbix/api_jsonrpc.php']
+  const body  = JSON.stringify({ jsonrpc: '2.0', method, params, auth, id: 1 })
+  const headers = { 'Content-Type': 'application/json' }
+
+  let lastErr = 'Error desconocido'
+  for (const path of paths) {
+    const res = await fetch(`${base}${path}`, { method: 'POST', headers, body })
+    if (res.status === 404) { lastErr = `HTTP 404 en ${path}`; continue }
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const data = await res.json()
+    if (data.error) throw new Error(data.error.data || data.error.message)
+    return data.result
+  }
+  throw new Error(`No se encontró la API Zabbix (${lastErr}). Verificá la URL.`)
 }
 
 export async function zabbixLogin(config: ZabbixConfig): Promise<string> {
-  if (config.authMethod === 'token') return config.apiToken!
+  if (config.authMethod === 'token') {
+    // Verify the token works with a real API call
+    await rpc(config.url, 'apiinfo.version', {}, null)
+    return config.apiToken!
+  }
   const result = await rpc(config.url, 'user.login', {
     user: config.username,
     password: config.password,
