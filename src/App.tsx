@@ -129,6 +129,52 @@ const LAYER_NAMES = [
 ] as const
 type LayerName = typeof LAYER_NAMES[number]
 
+// ─── Feature type SVG icons ───────────────────────────────────────────────────
+const FeatureIcons: Record<string, React.ReactNode> = {
+  node: (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="3" width="20" height="14" rx="2"/>
+      <path d="M8 21h8M12 17v4"/>
+    </svg>
+  ),
+  splice_box: (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M6 3v12"/>
+      <path d="M18 9a3 3 0 000-6H6"/>
+      <path d="M6 15a6 6 0 0012 0"/>
+    </svg>
+  ),
+  nap: (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="2"/>
+      <path d="M4.93 4.93a10 10 0 000 14.14M19.07 4.93a10 10 0 010 14.14"/>
+      <path d="M7.76 7.76a6 6 0 000 8.48M16.24 7.76a6 6 0 010 8.48"/>
+    </svg>
+  ),
+  fiber_line: (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 12h2"/>
+      <path d="M20 12h2"/>
+      <path d="M6 8c0 2 2 4 6 4s6-2 6-4"/>
+      <path d="M6 16c0-2 2-4 6-4s6 2 6 4"/>
+    </svg>
+  ),
+}
+
+const featureTypeClass: Record<string, string> = {
+  node:       'ft-node',
+  splice_box: 'ft-splice',
+  nap:        'ft-nap',
+  fiber_line: 'ft-fiber',
+}
+
+const statusClass: Record<string, string> = {
+  planned:     'st-planned',
+  active:      'st-active',
+  maintenance: 'st-maintenance',
+  damaged:     'st-damaged',
+}
+
 // ─── Dropdown menu component ─────────────────────────────────────────────────
 function DropdownMenu({ label, children, align = 'right' }: {
   label: React.ReactNode
@@ -889,7 +935,10 @@ export default function App() {
   const modalJsx = modalOpen ? (
     <div className="modal-overlay" onClick={closeModal}>
       <div className="modal" onClick={e => e.stopPropagation()}>
-        <h2>{modalMode === 'project' ? 'Nuevo proyecto' : 'Nuevo sub-proyecto'}</h2>
+        <div className="modal-header">
+          <h2>{modalMode === 'project' ? 'Nuevo proyecto' : 'Nuevo sub-proyecto'}</h2>
+        </div>
+        <div className="modal-body">
         <div className="form-stack">
           <label>
             Nombre
@@ -951,6 +1000,7 @@ export default function App() {
         {modalError && (
           <div className="modal-error">{modalError}</div>
         )}
+        </div>
         <div className="modal-footer">
           <button className="secondary" onClick={closeModal} disabled={modalSaving}>Cancelar</button>
           <button onClick={submitModal} disabled={!modalName.trim() || modalSaving}>
@@ -988,11 +1038,17 @@ export default function App() {
       <div className="screen">
         <div className="screen-header">
           <div>
-            <button className="back-btn" onClick={goHome}>← Proyectos</button>
+            <button className="back-btn" onClick={goHome}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+              Proyectos
+            </button>
             <h1>{currentProject?.name}</h1>
             {currentProject?.description && <p className="subtitle">{currentProject.description}</p>}
           </div>
-          <button onClick={() => openCreateModal('subproject')}>+ Nuevo sub-proyecto</button>
+          <button onClick={() => openCreateModal('subproject')} style={{ display:'inline-flex', alignItems:'center', gap:6 }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Nuevo sub-proyecto
+          </button>
         </div>
         {(currentProject?.subProjects.length ?? 0) === 0
           ? <p className="empty-state">No hay sub-proyectos todavía. Creá uno para comenzar.</p>
@@ -1003,13 +1059,21 @@ export default function App() {
                   <div className="card-title">{sp.name}</div>
                   {sp.description && <p className="card-desc">{sp.description}</p>}
                   {sp.location && (
-                    <p className="card-location">📍 {sp.location.displayName.split(',').slice(0, 2).join(',')}</p>
+                    <p className="card-location" style={{ display:'flex', alignItems:'center', gap:4, fontSize:'var(--text-xs)', color:'var(--text-link)', margin:0 }}>
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                      {sp.location.displayName.split(',').slice(0, 2).join(',')}
+                    </p>
                   )}
                   <div className="card-meta">
-                    <span>{sp.features.length} elemento(s)</span>
-                    <span>Actualizado: {new Date(sp.updatedAt).toLocaleDateString('es-AR')}</span>
+                    <span style={{ display:'flex', alignItems:'center', gap:4 }}>
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                      {sp.features.length} elemento(s)
+                    </span>
+                    <span>{new Date(sp.updatedAt).toLocaleDateString('es-AR')}</span>
                   </div>
-                  <button className="danger small" onClick={e => { e.stopPropagation(); deleteSubProject(sp.id) }}>
+                  <button className="danger small" onClick={e => { e.stopPropagation(); deleteSubProject(sp.id) }}
+                    style={{ display:'inline-flex', alignItems:'center', gap:4, alignSelf:'flex-start' }}>
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
                     Eliminar
                   </button>
                 </div>
@@ -1025,11 +1089,17 @@ export default function App() {
   return (
     <div className="app-shell">
       <aside className="sidebar">
-        <div>
-          <button className="back-btn" onClick={goToSubProjects}>← {currentProject?.name}</button>
-          <h1>{currentSubProject?.name}</h1>
+        <div style={{ paddingBottom: 12, borderBottom: '1px solid var(--border-subtle)' }}>
+          <button className="back-btn" onClick={goToSubProjects}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+            {currentProject?.name}
+          </button>
+          <h1 style={{ fontSize: 'var(--text-base)', fontWeight: 700, margin: '4px 0 2px', letterSpacing: '-0.01em' }}>{currentSubProject?.name}</h1>
           {currentSubProject?.location && (
-            <p className="subtitle">📍 {currentSubProject.location.displayName.split(',').slice(0, 2).join(',')}</p>
+            <p className="subtitle" style={{ fontSize: 'var(--text-xs)' }}>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              {currentSubProject.location.displayName.split(',').slice(0, 2).join(',')}
+            </p>
           )}
         </div>
 
@@ -1044,37 +1114,51 @@ export default function App() {
 
         {/* Compact action toolbar */}
         <div className="sidebar-toolbar">
-          <DropdownMenu label="📂 Importar" align="left">
+          <DropdownMenu label={
+            <><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Importar</>
+          } align="left">
             <button className="dropdown-item" onClick={() => importFileRef.current?.click()}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
               KML / KMZ / GeoJSON
             </button>
           </DropdownMenu>
 
-          <DropdownMenu label="✏ Dibujar" align="left">
+          <DropdownMenu label={
+            <><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg> Dibujar</>
+          } align="left">
             <button className="dropdown-item" onClick={() => activateDrawMode('node')}>
-              📍 Nodo
+              <span className="feature-type-icon ft-node" style={{width:16,height:16}}>{FeatureIcons.node}</span>
+              Nodo
             </button>
             <button className="dropdown-item" onClick={() => activateDrawMode('splice_box')}>
-              📦 Caja empalme
+              <span className="feature-type-icon ft-splice" style={{width:16,height:16}}>{FeatureIcons.splice_box}</span>
+              Caja empalme
             </button>
             <button className="dropdown-item" onClick={() => activateDrawMode('nap')}>
-              🔌 Caja NAP
+              <span className="feature-type-icon ft-nap" style={{width:16,height:16}}>{FeatureIcons.nap}</span>
+              Caja NAP
             </button>
             <button className="dropdown-item" onClick={() => activateDrawMode('fiber_line')}>
-              〰 Línea de fibra
+              <span className="feature-type-icon ft-fiber" style={{width:16,height:16}}>{FeatureIcons.fiber_line}</span>
+              Línea de fibra
             </button>
             <div className="dropdown-divider" />
             <button className="dropdown-item" onClick={stopDrawing}>
-              ⏹ Detener dibujo
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+              Detener dibujo
             </button>
           </DropdownMenu>
 
-          <DropdownMenu label="···" align="left">
+          <DropdownMenu label={
+            <><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg> Más</>
+          } align="left">
             <button className="dropdown-item" onClick={exportGeoJSON}>
-              ⬇ Exportar GeoJSON
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Exportar GeoJSON
             </button>
             <button className="dropdown-item danger" onClick={clearSubProject}>
-              🗑 Limpiar todo
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+              Limpiar todo
             </button>
           </DropdownMenu>
         </div>
@@ -1082,20 +1166,25 @@ export default function App() {
         <section className={`panel-block panel-section ${expandedSections.elements ? 'expanded' : ''}`}>
           <button type="button" className="panel-toggle" onClick={() => togglePanelSection('elements')}>
             <span>Elementos ({features.length})</span>
-            <span>{expandedSections.elements ? '▾' : '▸'}</span>
+            <svg className="panel-toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 18l6-6-6-6"/>
+            </svg>
           </button>
           {expandedSections.elements && (
             <div className="panel-content feature-list">
               {features.length === 0 && <p className="empty-state">Todavía no hay elementos.</p>}
               {features.map(feature => (
                 <button key={feature.properties.id}
-                  className={`feature-row compact ${selectedFeatureId === feature.properties.id ? 'selected' : ''}`}
+                  className={`feature-row ${selectedFeatureId === feature.properties.id ? 'selected' : ''}`}
                   onClick={() => setSelectedFeatureId(feature.properties.id)}>
-                  <span className="badge" style={{ background: feature.properties.color }} />
-                  <span>
-                    <strong>{feature.properties.name || typeLabels[feature.properties.featureType]}</strong>
-                    <small>{typeLabels[feature.properties.featureType]} · {statusLabels[feature.properties.status]}</small>
+                  <span className={`feature-type-icon ${featureTypeClass[feature.properties.featureType] ?? ''}`}>
+                    {FeatureIcons[feature.properties.featureType]}
                   </span>
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    <strong>{feature.properties.name || typeLabels[feature.properties.featureType]}</strong>
+                    <small>{typeLabels[feature.properties.featureType]}</small>
+                  </span>
+                  <span className={`status-dot ${statusClass[feature.properties.status] ?? ''}`} title={statusLabels[feature.properties.status]} />
                 </button>
               ))}
             </div>
@@ -1107,19 +1196,20 @@ export default function App() {
         <header className="topbar">
           <div className="breadcrumb">
             <span className="breadcrumb-link" onClick={goHome}>Proyectos</span>
-            <span className="breadcrumb-sep">/</span>
+            <svg className="breadcrumb-sep" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
             <span className="breadcrumb-link" onClick={goToSubProjects}>{currentProject?.name}</span>
-            <span className="breadcrumb-sep">/</span>
-            <span>{currentSubProject?.name}</span>
+            <svg className="breadcrumb-sep" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+            <span className="breadcrumb-current">{currentSubProject?.name}</span>
           </div>
           <div className="topbar-right">
             <button
               className={`secondary${zabbixConfig ? ' zabbix-configured' : ''}`}
               title={zabbixConfig ? 'Zabbix configurado — clic para editar' : 'Configurar Zabbix'}
               onClick={() => setShowZabbixConfig(true)}
-              style={{ fontSize: '0.78rem' }}
+              style={{ fontSize: '0.78rem', gap: 5, display:'inline-flex', alignItems:'center' }}
             >
-              ⚡ Zabbix{zabbixConfig ? ' ✓' : ''}
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+              Zabbix{zabbixConfig ? ' ✓' : ''}
             </button>
             {zabbixConfig && (
               <div style={{ position: 'relative' }}>
