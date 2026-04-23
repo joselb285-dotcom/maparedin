@@ -98,29 +98,26 @@ async function findOnuItem(
   const serial = rawSerial.replace(tagPrefix, '').trim()
   const base: Record<string, unknown> = {
     output: ['itemid', 'lastvalue', 'units', 'value_type', 'key_'],
-    limit: 1,
+    limit: 100,
   }
   if (oltHost) base.host = oltHost
 
-  // 1. Tag con operator numérico (Zabbix 6.x)
-  const r1 = await rpc(config, 'item.get', {
-    ...base,
-    search: { key_: itemKey }, searchWildcardsEnabled: true,
-    tags: [{ tag: config.onuSerialTag || 'SN', value: serial, operator: 1 }],
-  }, auth) as ItemRow[]
-  if (r1.length) return r1
+  // Buscar todos los items del ONU por tag, luego filtrar por key en JS
+  // (combinar search+tags en Zabbix API no funciona bien)
+  for (const operator of [1, '1']) {
+    const rows = await rpc(config, 'item.get', {
+      ...base,
+      tags: [{ tag: config.onuSerialTag || 'SN', value: serial, operator }],
+    }, auth) as ItemRow[]
+    if (rows.length) {
+      const match = rows.find(r => r.key_.startsWith(itemKey))
+      return match ? [match] : rows.slice(0, 1)
+    }
+  }
 
-  // 2. Tag con operator string (Zabbix 5.x)
-  const r2 = await rpc(config, 'item.get', {
-    ...base,
-    search: { key_: itemKey }, searchWildcardsEnabled: true,
-    tags: [{ tag: config.onuSerialTag || 'SN', value: serial, operator: '1' }],
-  }, auth) as ItemRow[]
-  if (r2.length) return r2
-
-  // 3. Serial como parte del key (ej: OntRxPower[HWTC1234ABCD])
+  // Fallback: serial como parte del key
   const r3 = await rpc(config, 'item.get', {
-    ...base,
+    ...base, limit: 1,
     search: { key_: serial }, searchWildcardsEnabled: true,
   }, auth) as ItemRow[]
   return r3
