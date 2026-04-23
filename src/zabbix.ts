@@ -83,42 +83,32 @@ export async function getOltPortPower(
   return units ? `${val} ${units}` : val
 }
 
-async function findOnuHostId(config: ZabbixConfig, auth: string, serial: string): Promise<string | null> {
-  let params: Record<string, unknown>
-  if (config.onuSearchMethod === 'tag') {
-    params = {
-      tags: [{ tag: config.onuSerialTag || 'SN', value: serial, operator: '1' }],
-      output: ['hostid'],
-      limit: 1,
-    }
-  } else {
-    const searchParam: Record<string, string> = {}
-    searchParam[config.onuSearchMethod === 'host' ? 'host' : 'name'] = serial
-    params = { search: searchParam, output: ['hostid'], limit: 1 }
+// ONU = item dentro del host OLT, identificado por tag SN
+async function findOnuItem(
+  config: ZabbixConfig, auth: string,
+  serial: string, oltHost: string | undefined, itemKey: string,
+): Promise<Array<{ itemid: string; lastvalue: string; units: string; value_type: string }>> {
+  const params: Record<string, unknown> = {
+    search: { key_: itemKey },
+    searchWildcardsEnabled: true,
+    tags: [{ tag: config.onuSerialTag || 'SN', value: serial, operator: '1' }],
+    output: ['itemid', 'lastvalue', 'units', 'value_type'],
+    limit: 1,
   }
-  const hosts = await rpc(config, 'host.get', params, auth) as Array<{ hostid: string }>
-  return hosts[0]?.hostid ?? null
+  if (oltHost) params.host = oltHost
+  return await rpc(config, 'item.get', params, auth) as typeof []
 }
 
 export async function getOnuPower(
   config: ZabbixConfig,
   auth: string,
   serial: string,
+  oltHost?: string,
 ): Promise<string | null> {
-  const hostid = await findOnuHostId(config, auth, serial)
-  if (!hostid) return null
-
-  const items = await rpc(config, 'item.get', {
-    hostids: [hostid],
-    search: { key_: config.onuItemKey },
-    searchWildcardsEnabled: true,
-    output: ['lastvalue', 'units'],
-    limit: 1,
-  }, auth) as Array<{ lastvalue: string; units: string }>
+  const items = await findOnuItem(config, auth, serial, oltHost, config.onuItemKey)
   if (!items[0]) return null
-  const val = items[0].lastvalue
-  const units = items[0].units
-  return units ? `${val} ${units}` : val
+  const { lastvalue, units } = items[0]
+  return units ? `${lastvalue} ${units}` : lastvalue
 }
 
 export type HistoryPoint = { clock: number; value: number }
@@ -128,53 +118,40 @@ export async function getOnuBandwidthHistory(
   auth: string,
   serial: string,
   hours: number,
+  oltHost?: string,
 ): Promise<{ inData: HistoryPoint[]; outData: HistoryPoint[]; unit: string } | null> {
-  const hostid = await findOnuHostId(config, auth, serial)
-  if (!hostid) return null
-
   const now  = Math.floor(Date.now() / 1000)
   const from = now - hours * 3600
 
-  async function fetchItem(key: string | undefined) {
-    if (!key?.trim()) return null
-    const items = await rpc(config, 'item.get', {
-      hostids: [hostid],
-      search: { key_: key },
-      searchWildcardsEnabled: true,
-      output: ['itemid', 'value_type', 'units'],
-      limit: 1,
-    }, auth) as Array<{ itemid: string; value_type: string; units: string }>
-    return items[0] ?? null
-  }
-
-  async function fetchHistory(item: { itemid: string; value_type: string } | null): Promise<HistoryPoint[]> {
-    if (!item) return []
-    const histType = item.value_type === '3' ? 3 : 0
-    const data = await rpc(config, 'history.get', {
+  async function fetchHistory(key: string | undefined): Promise<{ data: HistoryPoint[]; units: string }> {
+    if (!key?.trim()) return { data: [], units: '' }
+    const items = await findOnuItem(config, auth, serial, oltHost, key)
+    if (!items[0]) return { data: [], units: '' }
+    const { itemid, value_type, units } = items[0]
+    const histType = value_type === '3' ? 3 : 0
+    const rows = await rpc(config, 'history.get', {
       output: 'extend',
       history: histType,
-      itemids: [item.itemid],
+      itemids: [itemid],
       time_from: from,
       time_till: now,
       sortfield: 'clock',
       sortorder: 'ASC',
       limit: 500,
     }, auth) as Array<{ clock: string; value: string }>
-    return data.map(d => ({ clock: Number(d.clock), value: Number(d.value) }))
+    return { data: rows.map(d => ({ clock: Number(d.clock), value: Number(d.value) })), units }
   }
 
-  const [inItem, outItem] = await Promise.all([
-    fetchItem(config.onuBandwidthInKey),
-    fetchItem(config.onuBandwidthOutKey),
+  const [inResult, outResult] = await Promise.all([
+    fetchHistory(config.onuBandwidthInKey),
+    fetchHistory(config.onuBandwidthOutKey),
   ])
 
-  const [inData, outData] = await Promise.all([
-    fetchHistory(inItem),
-    fetchHistory(outItem),
-  ])
-
-  const unit = inItem?.units || outItem?.units || 'bps'
-  return { inData, outData, unit }
+  return {
+    inData:  inResult.data,
+    outData: outResult.data,
+    unit:    inResult.units || outResult.units || 'bps',
+  }
 }
 
 export function loadZabbixConfig(): ZabbixConfig | null {

@@ -44,7 +44,7 @@ export default function ClientModal({ fiberLabel, cableName, clientInfo, zabbixC
     setPowerErr(null)
     try {
       const auth = await zabbixLogin(zabbixConfig)
-      const val  = await getOnuPower(zabbixConfig, auth, form.onuSerial!.trim())
+      const val  = await getOnuPower(zabbixConfig, auth, form.onuSerial!.trim(), activeOlt)
       if (val === null) setPowerErr('No se encontró el host o el item en Zabbix')
       else setForm(prev => ({ ...prev, onuPowerDbm: val }))
     } catch (e: unknown) {
@@ -60,7 +60,7 @@ export default function ClientModal({ fiberLabel, cableName, clientInfo, zabbixC
     setBwHours(hours)
     try {
       const auth   = await zabbixLogin(zabbixConfig)
-      const result = await getOnuBandwidthHistory(zabbixConfig, auth, form.onuSerial!.trim(), hours)
+      const result = await getOnuBandwidthHistory(zabbixConfig, auth, form.onuSerial!.trim(), hours, activeOlt)
       if (!result) {
         setBwState({ status: 'error', msg: 'Host no encontrado en Zabbix' })
       } else {
