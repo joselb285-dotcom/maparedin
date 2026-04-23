@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  base: '/ftth/',
+  base: `/${process.env.VITE_TENANT_SLUG ?? 'ftth'}/`,
   server: {
     port: 5173,
     host: true,
