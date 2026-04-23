@@ -83,20 +83,44 @@ export async function getOltPortPower(
   return units ? `${val} ${units}` : val
 }
 
-// ONU = item dentro del host OLT, identificado por tag SN
+type ItemRow = { itemid: string; lastvalue: string; units: string; value_type: string; key_: string }
+
+// ONU = item bajo el host OLT. Intenta 3 estrategias en orden:
+// 1. item key + tag SN (operator numérico)
+// 2. item key + tag SN (operator string — compatibilidad)
+// 3. item key contiene el serial (LLD macro en key)
 async function findOnuItem(
   config: ZabbixConfig, auth: string,
   serial: string, oltHost: string | undefined, itemKey: string,
-): Promise<Array<{ itemid: string; lastvalue: string; units: string; value_type: string }>> {
-  const params: Record<string, unknown> = {
-    search: { key_: itemKey },
-    searchWildcardsEnabled: true,
-    tags: [{ tag: config.onuSerialTag || 'SN', value: serial, operator: '1' }],
-    output: ['itemid', 'lastvalue', 'units', 'value_type'],
+): Promise<ItemRow[]> {
+  const base: Record<string, unknown> = {
+    output: ['itemid', 'lastvalue', 'units', 'value_type', 'key_'],
     limit: 1,
   }
-  if (oltHost) params.host = oltHost
-  return await rpc(config, 'item.get', params, auth) as Array<{ itemid: string; lastvalue: string; units: string; value_type: string }>
+  if (oltHost) base.host = oltHost
+
+  // 1. Tag con operator numérico (Zabbix 6.x)
+  const r1 = await rpc(config, 'item.get', {
+    ...base,
+    search: { key_: itemKey }, searchWildcardsEnabled: true,
+    tags: [{ tag: config.onuSerialTag || 'SN', value: serial, operator: 1 }],
+  }, auth) as ItemRow[]
+  if (r1.length) return r1
+
+  // 2. Tag con operator string (Zabbix 5.x)
+  const r2 = await rpc(config, 'item.get', {
+    ...base,
+    search: { key_: itemKey }, searchWildcardsEnabled: true,
+    tags: [{ tag: config.onuSerialTag || 'SN', value: serial, operator: '1' }],
+  }, auth) as ItemRow[]
+  if (r2.length) return r2
+
+  // 3. Serial como parte del key (ej: OntRxPower[HWTC1234ABCD])
+  const r3 = await rpc(config, 'item.get', {
+    ...base,
+    search: { key_: serial }, searchWildcardsEnabled: true,
+  }, auth) as ItemRow[]
+  return r3
 }
 
 export async function getOnuPower(

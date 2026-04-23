@@ -45,7 +45,7 @@ export default function ClientModal({ fiberLabel, cableName, clientInfo, zabbixC
     try {
       const auth = await zabbixLogin(zabbixConfig)
       const val  = await getOnuPower(zabbixConfig, auth, form.onuSerial!.trim(), activeOlt)
-      if (val === null) setPowerErr('No se encontró el host o el item en Zabbix')
+      if (val === null) setPowerErr(`Item no encontrado en Zabbix. Verificá: OLT asignada (${activeOlt ?? 'ninguna'}), serial (${form.onuSerial?.trim()}), item key (${zabbixConfig.onuItemKey}), tag (${zabbixConfig.onuSerialTag || 'SN'})`)
       else setForm(prev => ({ ...prev, onuPowerDbm: val }))
     } catch (e: unknown) {
       setPowerErr(e instanceof Error ? e.message : 'Error al consultar Zabbix')
