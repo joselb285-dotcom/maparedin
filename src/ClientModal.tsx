@@ -46,7 +46,7 @@ export default function ClientModal({ fiberLabel, cableName, clientInfo, zabbixC
       const auth = await zabbixLogin(zabbixConfig)
       const val  = await getOnuPower(zabbixConfig, auth, form.onuSerial!.trim(), activeOlt)
       if (val === null) {
-        const diag = activeOlt ? await diagnoseOnu(zabbixConfig, auth, activeOlt) : 'Sin OLT asignada al cliente'
+        const diag = activeOlt ? await diagnoseOnu(zabbixConfig, auth, activeOlt, form.onuSerial!.trim()) : 'Sin OLT asignada al cliente'
         setPowerErr(`No encontrado. ${diag}`)
       }
       else setForm(prev => ({ ...prev, onuPowerDbm: val }))

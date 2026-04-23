@@ -127,7 +127,7 @@ async function findOnuItem(
 }
 
 export async function diagnoseOnu(
-  config: ZabbixConfig, auth: string, oltHost: string,
+  config: ZabbixConfig, auth: string, oltHost: string, serial: string,
 ): Promise<string> {
   // 1. Check host exists
   const hosts = await rpc(config, 'host.get', {
