@@ -136,19 +136,29 @@ export async function diagnoseOnu(
   if (!hosts[0]) return `Host "${oltHost}" no encontrado en Zabbix. Verificá el hostname exacto.`
   const hostid = hosts[0].hostid
 
-  // 2. Sample items (first 5 with key containing "Ont" or "onu" or "rx")
-  const items = await rpc(config, 'item.get', {
-    hostids: [hostid], output: ['key_', 'name'], limit: 5,
-    search: { key_: 'Ont' }, searchWildcardsEnabled: true,
-  }, auth) as Array<{ key_: string; name: string }>
-
-  if (!items.length) {
-    const all = await rpc(config, 'item.get', {
-      hostids: [hostid], output: ['key_'], limit: 5,
+  async function searchKeys(term: string, limit = 5) {
+    return await rpc(config, 'item.get', {
+      hostids: [hostid], output: ['key_'], limit,
+      search: { key_: term }, searchWildcardsEnabled: true,
     }, auth) as Array<{ key_: string }>
-    return `Host "${oltHost}" (id:${hostid}) encontrado. Sin items con "Ont". Primeros keys: ${all.map(i => i.key_).join(', ')}`
   }
-  return `Host "${oltHost}" encontrado. Items Ont: ${items.map(i => i.key_).join(', ')}`
+
+  const [byPower, byRx, byOnt, bySn] = await Promise.all([
+    searchKeys('Power'), searchKeys('Rx'), searchKeys('Ont'), searchKeys('Sn'),
+  ])
+
+  const found = [
+    byPower.length ? `Power: ${byPower.map(i=>i.key_).join(', ')}` : '',
+    byRx.length    ? `Rx: ${byRx.map(i=>i.key_).join(', ')}` : '',
+    byOnt.length   ? `Ont: ${byOnt.map(i=>i.key_).join(', ')}` : '',
+    bySn.length    ? `Sn: ${bySn.map(i=>i.key_).join(', ')}` : '',
+  ].filter(Boolean)
+
+  if (!found.length) {
+    const all = await searchKeys('', 8)
+    return `Host "${oltHost}" encontrado pero sin items de Power/Rx/Ont/Sn. Muestra: ${all.map(i=>i.key_).join(', ')}`
+  }
+  return `Host "${oltHost}" encontrado. ${found.join(' | ')}`
 }
 
 export async function getOnuPower(
