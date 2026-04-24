@@ -1027,6 +1027,12 @@ export default function SpliceCardModal({
                       )}
                     </span>
                     <span className="cable-hdr-actions">
+                      {cable.fibers.filter(f => f.clientInfo?.onuPowerDbm).map(f => (
+                        <span key={f.id} className={`fiber-power-badge ${getPowerClass(f.clientInfo!.onuPowerDbm)}`}
+                          title={f.clientName || f.clientInfo?.name}>
+                          {f.clientInfo!.onuPowerDbm}
+                        </span>
+                      ))}
                       <button
                         className="secondary small"
                         title="Vincular al mapa"
@@ -1320,6 +1326,12 @@ export default function SpliceCardModal({
                         title="Vincular al mapa"
                         onClick={() => setLinkingCableId(linkingCableId === cable.id ? null : cable.id)}
                       >🔗</button>
+                      {cable.fibers.filter(f => f.clientInfo?.onuPowerDbm).map(f => (
+                        <span key={f.id} className={`fiber-power-badge ${getPowerClass(f.clientInfo!.onuPowerDbm)}`}
+                          title={f.clientName || f.clientInfo?.name}>
+                          {f.clientInfo!.onuPowerDbm}
+                        </span>
+                      ))}
                     </span>
                     <span className="cable-hdr-name">
                       {linkedFeat && (
