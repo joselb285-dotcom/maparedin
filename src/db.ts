@@ -11,9 +11,10 @@ export async function dbGetAllProjects(tenantId: string): Promise<Project[]> {
 }
 
 export async function dbSaveProject(project: Project, tenantId: string): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser()
   const { error } = await supabase
     .from('projects')
-    .upsert({ id: project.id, tenant_id: tenantId, data: project })
+    .upsert({ id: project.id, tenant_id: tenantId, owner_id: user!.id, data: project })
   if (error) throw error
 }
 
